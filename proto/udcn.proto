@@ -1,0 +1,447 @@
+syntax = "proto3";
+
+package udcn;
+
+// Main service for communication between the Python control plane and Rust transport layer
+service UdcnControl {
+  // Update MTU based on ML prediction
+  rpc UpdateMtu(MtuRequest) returns (MtuResponse);
+
+  // Register a new prefix for forwarding or production
+  rpc RegisterPrefix(PrefixRegistrationRequest) returns (PrefixRegistrationResponse);
+
+  // Unregister a previously registered prefix
+  rpc UnregisterPrefix(PrefixUnregistrationRequest) returns (PrefixUnregistrationResponse);
+
+  // Get transport statistics and metrics
+  rpc GetMetrics(MetricsRequest) returns (MetricsResponse);
+  
+  // Collect network interface information
+  rpc GetNetworkInterfaces(NetworkInterfacesRequest) returns (NetworkInterfacesResponse);
+  
+  // Control the state of the transport (start/stop/restart)
+  rpc ControlTransport(TransportControlRequest) returns (TransportControlResponse);
+  
+  // Streaming metrics for real-time monitoring
+  rpc StreamMetrics(StreamMetricsRequest) returns (stream MetricsData);
+  
+  // Configure the transport layer parameters
+  rpc ConfigureTransport(TransportConfigRequest) returns (TransportConfigResponse);
+  
+  // Get the current state of the transport layer
+  rpc GetTransportState(TransportStateRequest) returns (TransportStateResponse);
+  
+  // QUIC transport specific methods
+  
+  // Create a QUIC connection to a remote NDN router
+  rpc CreateQuicConnection(QuicConnectionRequest) returns (QuicConnectionResponse);
+  
+  // Send an Interest packet over a QUIC connection
+  rpc SendInterest(InterestPacketRequest) returns (DataPacketResponse);
+  
+  // Receive Data packets (server streaming)
+  rpc ReceiveData(InterestFilter) returns (stream DataPacketResponse);
+
+  // XDP integration methods
+  
+  // Configure the XDP program
+  rpc ConfigureXdp(XdpConfigRequest) returns (XdpConfigResponse);
+  
+  // Get XDP program statistics
+  rpc GetXdpStats(XdpStatsRequest) returns (XdpStatsResponse);
+  
+  // Update XDP program maps
+  rpc UpdateXdpMaps(XdpMapUpdateRequest) returns (XdpMapUpdateResponse);
+  
+  // ML-based MTU Prediction methods
+  
+  // Predict optimal MTU size based on network statistics
+  rpc PredictMtu(MtuPredictionRequest) returns (MtuPredictionResponse);
+  
+  // Override the ML model with a fixed MTU value
+  rpc SetMtuOverride(MtuOverrideRequest) returns (MtuOverrideResponse);
+  
+  // Get MTU prediction history
+  rpc GetMtuPredictionHistory(MtuHistoryRequest) returns (MtuHistoryResponse);
+}
+
+// MTU-related messages
+message MtuRequest {
+  uint32 mtu = 1;
+  string interface_name = 2;
+  float confidence = 3;
+  map<string, string> metadata = 4;
+}
+
+message MtuResponse {
+  bool success = 1;
+  string error_message = 2;
+  uint32 previous_mtu = 3;
+  uint32 current_mtu = 4;
+}
+
+// ML-based MTU prediction messages
+message MtuPredictionRequest {
+  float rtt_ms = 1;                // Round Trip Time in milliseconds
+  float packet_loss_rate = 2;      // Packet loss rate (0.0 to 1.0)
+  float throughput_mbps = 3;       // Throughput in Mbps
+  string connection_id = 4;        // Optional: QUIC connection ID
+  string interface_name = 5;       // Optional: Network interface name
+  map<string, float> additional_metrics = 6;  // Additional metrics for prediction
+}
+
+message MtuPredictionResponse {
+  bool success = 1;
+  string error_message = 2;
+  uint32 predicted_mtu = 3;        // Predicted optimal MTU
+  bool is_override = 4;            // Whether prediction is from override
+  float confidence = 5;            // Confidence score (0.0 to 1.0)
+  float inference_time_ms = 6;     // Time taken for inference
+  float raw_prediction = 7;        // Raw model output before discretization
+  uint64 timestamp_ms = 8;         // Timestamp of prediction
+}
+
+message MtuOverrideRequest {
+  bool enable_override = 1;         // Whether to enable override
+  uint32 mtu_value = 2;            // MTU value to use for override
+}
+
+message MtuOverrideResponse {
+  bool success = 1;
+  string error_message = 2;
+  bool override_active = 3;        // Whether override is active
+  uint32 override_value = 4;       // Current override value if active
+}
+
+message MtuHistoryRequest {
+  uint32 max_entries = 1;           // Maximum number of history entries to return
+}
+
+message MtuPredictionRecord {
+  float rtt_ms = 1;
+  float packet_loss_rate = 2;
+  float throughput_mbps = 3;
+  uint32 predicted_mtu = 4;
+  float raw_prediction = 5;
+  bool is_override = 6;
+  uint64 timestamp_ms = 7;
+}
+
+message MtuHistoryResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated MtuPredictionRecord predictions = 3;
+}
+
+// Prefix registration messages
+message PrefixRegistrationRequest {
+  string prefix = 1;
+  PrefixType type = 2;
+  uint32 priority = 3;
+  map<string, string> flags = 4;
+  
+  enum PrefixType {
+    PRODUCER = 0;
+    FORWARDER = 1;
+  }
+}
+
+message PrefixRegistrationResponse {
+  bool success = 1;
+  string error_message = 2;
+  uint64 registration_id = 3;
+}
+
+// Prefix unregistration messages
+message PrefixUnregistrationRequest {
+  uint64 registration_id = 1;
+  string prefix = 2;
+}
+
+message PrefixUnregistrationResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+// Metrics-related messages
+message MetricsRequest {
+  repeated string metric_names = 1;
+  uint64 since_timestamp = 2;
+}
+
+message MetricsResponse {
+  bool success = 1;
+  string error_message = 2;
+  map<string, MetricValue> metrics = 3;
+}
+
+message MetricValue {
+  oneof value {
+    uint64 counter_value = 1;
+    double gauge_value = 2;
+    Histogram histogram_value = 3;
+  }
+  uint64 timestamp = 4;
+}
+
+message Histogram {
+  repeated uint64 buckets = 1;
+  repeated uint64 counts = 2;
+  double sum = 3;
+  uint64 count = 4;
+}
+
+// Network interface messages
+message NetworkInterfacesRequest {
+  bool include_stats = 1;
+}
+
+message NetworkInterfacesResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated NetworkInterface interfaces = 3;
+}
+
+message NetworkInterface {
+  string name = 1;
+  string mac_address = 2;
+  repeated string ip_addresses = 3;
+  uint32 mtu = 4;
+  bool is_up = 5;
+  uint64 rx_bytes = 6;
+  uint64 tx_bytes = 7;
+  uint64 rx_packets = 8;
+  uint64 tx_packets = 9;
+  uint64 rx_errors = 10;
+  uint64 tx_errors = 11;
+  uint64 tx_dropped = 12;
+  uint64 rx_dropped = 13;
+}
+
+// Transport control messages
+message TransportControlRequest {
+  ControlAction action = 1;
+  map<string, string> parameters = 2;
+  
+  enum ControlAction {
+    START = 0;
+    STOP = 1;
+    RESTART = 2;
+    PAUSE = 3;
+    RESUME = 4;
+  }
+}
+
+message TransportControlResponse {
+  bool success = 1;
+  string error_message = 2;
+  TransportState current_state = 3;
+  
+  enum TransportState {
+    RUNNING = 0;
+    STOPPED = 1;
+    PAUSED = 2;
+    ERROR = 3;
+    STARTING = 4;
+    STOPPING = 5;
+  }
+}
+
+// Streaming metrics messages
+message StreamMetricsRequest {
+  repeated string metric_names = 1;
+  uint32 interval_ms = 2;
+  uint32 max_samples = 3;
+}
+
+message MetricsData {
+  uint64 timestamp = 1;
+  map<string, MetricValue> metrics = 2;
+}
+
+// Transport configuration messages
+message TransportConfigRequest {
+  uint32 cache_capacity = 1;
+  uint32 idle_timeout = 2;
+  bool enable_metrics = 3;
+  uint32 metrics_port = 4;
+  string bind_address = 5;
+  map<string, string> advanced_config = 6;
+}
+
+message TransportConfigResponse {
+  bool success = 1;
+  string error_message = 2;
+  TransportConfig current_config = 3;
+}
+
+message TransportConfig {
+  uint32 mtu = 1;
+  uint32 cache_capacity = 2;
+  uint32 idle_timeout = 3;
+  bool enable_metrics = 4;
+  uint32 metrics_port = 5;
+  string bind_address = 6;
+  map<string, string> advanced_config = 7;
+}
+
+// Transport state messages
+message TransportStateRequest {
+  bool include_detailed_stats = 1;
+}
+
+message TransportStateResponse {
+  bool success = 1;
+  string error_message = 2;
+  TransportControlResponse.TransportState state = 3;
+  uint32 uptime_seconds = 4;
+  uint64 interests_processed = 5;
+  uint64 data_packets_sent = 6;
+  uint64 cache_hits = 7;
+  uint64 cache_misses = 8;
+  double cache_hit_ratio = 9;
+  map<string, string> detailed_stats = 10;
+}
+
+// QUIC connection messages
+message QuicConnectionRequest {
+  string peer_address = 1;
+  uint32 port = 2;
+  bool use_tls = 3;
+  string certificate_path = 4; // Optional path to a certificate file
+  string key_path = 5;         // Optional path to a key file
+  map<string, string> connection_options = 6;
+  uint32 connect_timeout_ms = 7;
+}
+
+message QuicConnectionResponse {
+  bool success = 1;
+  string error_message = 2;
+  string connection_id = 3;  // Unique identifier for the connection
+  string remote_address = 4;
+  uint64 timestamp_ms = 5;   // Epoch time in milliseconds when connection was established
+  ConnectionQuality quality = 6;
+}
+
+enum ConnectionQuality {
+  UNKNOWN = 0;
+  EXCELLENT = 1;
+  GOOD = 2;
+  FAIR = 3;
+  POOR = 4;
+  BAD = 5;
+}
+
+// NDN packet messages
+message InterestPacketRequest {
+  string name = 1;           // NDN name (e.g., /example/data)
+  string connection_id = 2;  // QUIC connection to use
+  uint32 nonce = 3;          // Random nonce
+  uint32 lifetime_ms = 4;    // Interest lifetime in milliseconds
+  bool can_be_prefix = 5;    // Whether this is a prefix Interest
+  bool must_be_fresh = 6;    // Whether data must be fresh
+  bytes forwarding_hint = 7; // Optional forwarding hint
+  string selectors = 8;      // JSON-encoded selectors
+}
+
+message DataPacketResponse {
+  bool success = 1;
+  string error_message = 2;
+  string name = 3;           // Full name of the Data packet
+  bytes content = 4;         // Content of the Data packet
+  uint32 content_type = 5;   // Content type code
+  uint64 freshness_period = 6; // Freshness period in milliseconds
+  bytes signature = 7;       // Signature value
+  string signature_type = 8; // Type of signature used
+  uint64 timestamp_ms = 9;   // Timestamp when data was received
+}
+
+message InterestFilter {
+  string prefix = 1;         // Prefix to match incoming Interests
+  bool include_subprefixes = 2;
+  uint32 filter_id = 3;      // Optional filter identifier
+}
+
+// XDP Integration messages
+message XdpConfigRequest {
+  string interface_name = 1; // Network interface to attach XDP program to
+  XdpMode mode = 2;          // XDP mode to use
+  string xdp_program_path = 3; // Path to XDP program object file
+  bool enable_redirect = 4;  // Whether to enable packet redirection
+  string redirect_interface = 5; // Interface to redirect packets to (if enabled)
+  bool force_load = 6;       // Force loading even if an existing program is attached
+  uint32 cache_size = 7;     // Size of the name cache in the XDP program
+
+  enum XdpMode {
+    NATIVE = 0;    // Native XDP (driver mode)
+    SKB = 1;       // Generic XDP (SKB mode)
+    HW = 2;        // Hardware offload mode
+  }
+}
+
+message XdpConfigResponse {
+  bool success = 1;
+  string error_message = 2;
+  bool is_loaded = 3;        // Whether the XDP program is loaded
+  string interface_name = 4; // Interface the program is attached to
+  XdpConfigRequest.XdpMode mode = 5; // Mode that was used
+  uint32 program_id = 6;     // ID of the loaded program
+}
+
+message XdpStatsRequest {
+  string interface_name = 1; // Interface to get stats for
+  bool reset = 2;           // Whether to reset stats after reading
+}
+
+message XdpStatsResponse {
+  bool success = 1;
+  string error_message = 2;
+  uint64 interests_received = 3;
+  uint64 interests_forwarded = 4;
+  uint64 interests_dropped = 5;
+  uint64 data_received = 6;
+  uint64 data_forwarded = 7;
+  uint64 cache_hits = 8;
+  uint64 cache_misses = 9;
+  double cache_hit_ratio = 10;
+  uint64 redirect_success = 11;
+  uint64 redirect_error = 12;
+  uint64 xdp_pass = 13;     // Packets passed to the Linux network stack
+  uint64 xdp_drop = 14;     // Packets dropped by XDP
+  uint64 xdp_tx = 15;       // Packets transmitted by XDP
+  uint64 xdp_redirect = 16; // Packets redirected by XDP
+}
+
+message XdpMapUpdateRequest {
+  string interface_name = 1; // Interface with the XDP program
+  string map_name = 2;      // Name of the map to update
+  repeated XdpMapEntry entries = 3; // Entries to update
+  bool clear_existing = 4;  // Whether to clear existing entries first
+  
+  message XdpMapEntry {
+    bytes key = 1;           // Raw key bytes
+    bytes value = 2;         // Raw value bytes
+    MapOperation operation = 3; // Operation to perform
+    
+    enum MapOperation {
+      INSERT = 0;  // Insert or update
+      DELETE = 1;  // Delete entry
+      LOOKUP = 2;  // Lookup only (for XdpMapUpdateResponse)
+    }
+  }
+}
+
+message XdpMapUpdateResponse {
+  bool success = 1;
+  string error_message = 2;
+  uint32 entries_updated = 3;  // Number of entries successfully updated
+  uint32 entries_failed = 4;   // Number of entries that failed to update
+  repeated XdpMapResult results = 5; // Results for each entry
+  
+  message XdpMapResult {
+    bytes key = 1;             // Key that was operated on
+    bool success = 2;          // Whether the operation was successful
+    string error_message = 3;  // Error message if operation failed
+    bytes current_value = 4;   // Current value in the map (for lookups)
+  }
+}
