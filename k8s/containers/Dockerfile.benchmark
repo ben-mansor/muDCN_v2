@@ -1,0 +1,31 @@
+FROM python:3.9-slim
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    iputils-ping \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Create directories for results and configuration
+RUN mkdir -p /etc/udcn /results
+
+# Copy requirements first for better caching
+COPY ./python_client/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the benchmark client source code
+COPY ./python_client .
+
+# Create a non-root user
+RUN useradd -m benchuser
+RUN chown -R benchuser:benchuser /app /etc/udcn /results
+USER benchuser
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Default command
+ENTRYPOINT ["python"]
+CMD ["benchmark_client.py", "--config", "/etc/udcn/benchmark.yaml"]

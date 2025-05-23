@@ -1,0 +1,194 @@
+\documentclass[crop,tikz]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes,fit,backgrounds,calc,shadows,decorations.pathmorphing,decorations.pathreplacing,shapes.multipart}
+\usepackage{xcolor}
+
+% Define colors
+\definecolor{k8sblue}{RGB}{33,150,243}
+\definecolor{nodegreen}{RGB}{76,175,80}
+\definecolor{prodcolor}{RGB}{183,28,28}
+\definecolor{consumercolor}{RGB}{26,35,126}
+\definecolor{controlcolor}{RGB}{123,31,162}
+\definecolor{networkcolor}{RGB}{0,131,143}
+\definecolor{monitorcolor}{RGB}{255,152,0}
+\definecolor{storagecolor}{RGB}{0,150,136}
+
+\begin{document}
+\begin{tikzpicture}[
+    node distance=1.5cm and 2cm,
+    box/.style={
+        draw,
+        rounded corners,
+        minimum width=4cm,
+        minimum height=1.8cm,
+        align=center,
+        font=\sffamily\bfseries,
+        drop shadow
+    },
+    cluster/.style={
+        box,
+        fill=k8sblue!20
+    },
+    node/.style={
+        box,
+        fill=nodegreen!20
+    },
+    producer/.style={
+        box,
+        fill=prodcolor!20
+    },
+    consumer/.style={
+        box,
+        fill=consumercolor!20
+    },
+    controller/.style={
+        box,
+        fill=controlcolor!20
+    },
+    network/.style={
+        draw,
+        cylinder,
+        cylinder uses custom fill,
+        cylinder end fill=networkcolor!20,
+        cylinder body fill=networkcolor!10,
+        minimum width=2cm,
+        minimum height=1.5cm,
+        shape border rotate=90,
+        aspect=0.3,
+        align=center,
+        font=\sffamily\small
+    },
+    monitor/.style={
+        box,
+        fill=monitorcolor!20
+    },
+    storage/.style={
+        draw,
+        cylinder,
+        cylinder uses custom fill,
+        cylinder end fill=storagecolor!20,
+        cylinder body fill=storagecolor!10,
+        minimum width=2cm,
+        minimum height=1.8cm,
+        shape border rotate=90,
+        aspect=0.3,
+        align=center,
+        font=\sffamily\small
+    },
+    arrow/.style={
+        -Stealth,
+        thick,
+        shorten >=1pt,
+        shorten <=1pt
+    },
+    bidarrow/.style={
+        Stealth-Stealth,
+        thick,
+        shorten >=1pt,
+        shorten <=1pt
+    },
+    networkarrow/.style={
+        -Stealth,
+        ultra thick,
+        networkcolor!60,
+        shorten >=1pt,
+        shorten <=1pt
+    },
+    detail/.style={
+        font=\footnotesize\sffamily,
+        text width=2.8cm,
+        align=center
+    }
+]
+
+% Title
+\node[font=\LARGE\sffamily\bfseries] (title) {μDCN Kubernetes Architecture};
+
+% Kubernetes Cluster
+\node[cluster, below=of title, minimum width=18cm, minimum height=14cm] (k8s) {};
+\node[font=\sffamily\bfseries, k8sblue!80!black, above=0.1cm of k8s.north] {Kubernetes Cluster};
+
+% Calico CNI
+\node[network, below=1.2cm of k8s.north, minimum width=16cm, minimum height=2cm] (calico) {Calico CNI Network};
+\node[font=\sffamily\bfseries, networkcolor!80!black, above=0.1cm of calico.north] {Network Overlay};
+
+% Worker Nodes
+\node[node, below=2.5cm of calico.west, xshift=2cm] (node1) {Worker Node 1};
+\node[node, right=3cm of node1] (node2) {Worker Node 2};
+\node[node, right=3cm of node2] (node3) {Worker Node 3};
+
+% DaemonSet
+\node[producer, below=0.8cm of node1.south, minimum width=2.8cm, minimum height=1.5cm] (ds1) {Transport\\(DaemonSet)};
+\node[producer, below=0.8cm of node2.south, minimum width=2.8cm, minimum height=1.5cm] (ds2) {Transport\\(DaemonSet)};
+\node[producer, below=0.8cm of node3.south, minimum width=2.8cm, minimum height=1.5cm] (ds3) {Transport\\(DaemonSet)};
+
+% Connect nodes to DaemonSets
+\draw[arrow] (node1) -- (ds1);
+\draw[arrow] (node2) -- (ds2);
+\draw[arrow] (node3) -- (ds3);
+
+% Controller and Benchmark Clients
+\node[controller, below=5.5cm of calico.south, xshift=-3cm] (controller) {ML Controller\\(Deployment)};
+\node[consumer, right=4cm of controller] (clients) {Benchmark Clients\\(Deployment)};
+
+% Storage/PVCs
+\node[storage, left=2cm of controller] (storage) {Persistent\\Volume\\(Models)};
+\draw[arrow] (storage) -- (controller);
+
+% Connect components
+\draw[networkarrow] (ds1) -- ++(0,-1) -| (controller) node[pos=0.75, above, font=\footnotesize\sffamily] {Metrics};
+\draw[networkarrow] (ds2) -- ++(0,-1) -| (controller);
+\draw[networkarrow] (ds3) -- ++(0,-1) -| (controller);
+
+\draw[networkarrow] (ds1) -- ++(0,-1.5) -| (clients) node[pos=0.25, below, font=\footnotesize\sffamily] {NDN Traffic};
+\draw[networkarrow] (ds2) -- ++(0,-1.5) -| (clients);
+\draw[networkarrow] (ds3) -- ++(0,-1.5) -| (clients);
+
+\draw[networkarrow, bend right=20] (controller) to (clients) node[midway, below, font=\footnotesize\sffamily] {Config Updates};
+
+% Monitoring
+\node[monitor, below=1cm of k8s.south, xshift=-4cm] (prometheus) {Prometheus};
+\node[monitor, right=2cm of prometheus] (grafana) {Grafana};
+
+\draw[networkarrow] (prometheus) -- (grafana);
+\draw[networkarrow, dashed] (k8s.south) -- ++(0,-0.3) -| (prometheus) node[pos=0.75, above, font=\footnotesize\sffamily] {Metrics};
+
+% Chaos Testing
+\node[draw, cloud, cloud puffs=15, minimum width=5cm, minimum height=2.5cm, 
+      fill=red!10, below=6cm of calico.south, xshift=5cm, align=center, font=\sffamily\small] 
+      (chaos) {Chaos Mesh\\Resilience Testing};
+
+% Draw arrows from chaos testing to components
+\draw[->, dashed, red!60] (chaos) to[bend left=20] (controller);
+\draw[->, dashed, red!60] (chaos) to[bend right=20] (ds2);
+\draw[->, dashed, red!60] (chaos) to[bend right=40] (calico);
+
+% Services
+\node[draw, ellipse, minimum width=3cm, minimum height=1.5cm, fill=yellow!10, 
+      above=0.3cm of controller, align=center, font=\footnotesize\sffamily] 
+      (svc1) {Controller Service};
+
+\node[draw, ellipse, minimum width=3cm, minimum height=1.5cm, fill=yellow!10, 
+      above=0.3cm of clients, align=center, font=\footnotesize\sffamily] 
+      (svc2) {Transport Service};
+
+\draw[arrow, dashed] (svc1) -- (controller);
+\draw[arrow, dashed] (svc2) -- (clients);
+\draw[bidarrow, dashed] (svc2) -- ++(0,1) -| (ds2);
+
+% Add notes
+\node[draw, rounded corners, fill=gray!10, font=\footnotesize, align=left, text width=5cm, 
+      below right=0.5cm and 0.2cm of k8s.north west] (notes) {
+      \textbf{Key Components:}
+      \begin{itemize}
+          \item Transport (DaemonSet): Per-node eBPF/XDP for packet processing
+          \item ML Controller: Centralized adaptation
+          \item Benchmark Clients: Performance testing
+          \item Calico CNI: Advanced networking
+          \item Prometheus/Grafana: Monitoring
+          \item Chaos Mesh: Resilience testing
+      \end{itemize}
+      };
+
+\end{tikzpicture}
+\end{document}

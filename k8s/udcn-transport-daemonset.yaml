@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: udcn-transport
+  namespace: udcn-system
+  labels:
+    app.kubernetes.io/name: udcn-transport
+    app.kubernetes.io/part-of: udcn
+spec:
+  selector:
+    matchLabels:
+      app: udcn-transport
+  template:
+    metadata:
+      labels:
+        app: udcn-transport
+        app.kubernetes.io/part-of: udcn
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9091"
+        prometheus.io/path: "/metrics"
+    spec:
+      hostNetwork: true  # Required for XDP/eBPF access
+      containers:
+      - name: transport
+        image: nginx:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true  # Needed for eBPF/XDP
+          capabilities:
+            add:
+              - NET_ADMIN
+              - SYS_ADMIN
+              - SYS_RESOURCE
+        ports:
+        - containerPort: 6363
+          name: ndn
+          protocol: UDP
+        - containerPort: 9091
+          name: metrics
+          protocol: TCP
+        volumeMounts:
+        - name: bpf-fs
+          mountPath: /sys/fs/bpf
+        - name: dev-net
+          mountPath: /dev/net
+        - name: config-volume
+          mountPath: /etc/udcn
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9091
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 9091
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+      volumes:
+      - name: bpf-fs
+        hostPath:
+          path: /sys/fs/bpf
+          type: Directory
+      - name: dev-net
+        hostPath:
+          path: /dev/net
+          type: Directory
+      - name: config-volume
+        configMap:
+          name: udcn-transport-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: udcn-transport-config
+  namespace: udcn-system
+data:
+  transport.yaml: |
+    # μDCN Transport Configuration
+    server:
+      bind_address: "0.0.0.0"
+      ndn_port: 6363
+      metrics_port: 9091
+      
+    xdp:
+      enabled: true
+      interface: "eth0"
+      mode: "native"  # Options: native, skb, hw
+      
+    cache:
+      enabled: true
+      size_mb: 512
+      policy: "lru"  # Options: lru, lfu, fifo
+      
+    logging:
+      level: "info"  # Options: debug, info, warn, error
+      format: "json"

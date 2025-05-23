@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: udcn-demo-metrics
+  namespace: udcn-system
+data:
+  demo-metrics.txt: |
+    # μDCN DEMO METRICS
+    # This represents sample metrics from a μDCN deployment
+    cache_hits 2345
+    cache_misses 321
+    interest_packets_received 5678
+    data_packets_sent 5432
+    average_latency_ms 12.5
+    current_clients 8
+    memory_usage_bytes 1258291
+    cpu_usage_percent 22.4
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udcn-demo
+  namespace: udcn-system
+  labels:
+    app: udcn-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: udcn-demo
+  template:
+    metadata:
+      labels:
+        app: udcn-demo
+    spec:
+      containers:
+      - name: demo-pod
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: metrics-volume
+          mountPath: /usr/share/nginx/html/metrics
+      volumes:
+      - name: metrics-volume
+        configMap:
+          name: udcn-demo-metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: udcn-demo-service
+  namespace: udcn-system
+spec:
+  selector:
+    app: udcn-demo
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udcn-controller
+  namespace: udcn-system
+  labels:
+    app.kubernetes.io/name: udcn-controller
+    app.kubernetes.io/part-of: udcn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: udcn-controller
+  template:
+    metadata:
+      labels:
+        app: udcn-controller
+        app.kubernetes.io/part-of: udcn
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9092"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: controller
+        image: udcn/controller:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+          name: api
+          protocol: TCP
+        - containerPort: 9092
+          name: metrics
+          protocol: TCP
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/udcn
+        - name: model-volume
+          mountPath: /models
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+        env:
+        - name: TRANSPORT_SERVICE
+          value: "udcn-transport-service.udcn-system.svc.cluster.local"
+        - name: TRANSPORT_PORT
+          value: "9091"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: TF_CPP_MIN_LOG_LEVEL
+          value: "2"  # Reduce TensorFlow logging verbosity
+      volumes:
+      - name: config-volume
+        configMap:
+          name: udcn-controller-config
+      - name: model-volume
+        persistentVolumeClaim:
+          claimName: udcn-model-storage
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: udcn-controller-config
+  namespace: udcn-system
+data:
+  controller.yaml: |
+    # μDCN Controller Configuration
+    server:
+      bind_address: "0.0.0.0"
+      api_port: 5000
+      metrics_port: 9092
+      
+    ml:
+      model_path: "/models/mtu_prediction.tflite"
+      quantized: true
+      update_interval_sec: 10
+      confidence_threshold: 0.85
+      
+    adaptation:
+      enabled: true
+      parameters:
+        - name: "mtu"
+          min: 512
+          max: 9000
+          default: 1500
+          
+    monitoring:
+      metrics_enabled: true
+      collection_interval_sec: 5
+      
+    logging:
+      level: "info"
+      format: "json"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: udcn-model-storage
+  namespace: udcn-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

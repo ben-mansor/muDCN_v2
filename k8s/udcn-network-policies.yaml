@@ -1,0 +1,57 @@
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: udcn-transport-policy
+  namespace: udcn-system
+spec:
+  selector: app == 'udcn-transport'
+  ingress:
+  - action: Allow
+    protocol: UDP
+    destination:
+      ports:
+      - 6363
+  - action: Allow
+    protocol: TCP
+    destination:
+      ports:
+      - 9091
+  egress:
+  - action: Allow
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: udcn-controller-policy
+  namespace: udcn-system
+spec:
+  selector: app == 'udcn-controller'
+  ingress:
+  - action: Allow
+    protocol: TCP
+    destination:
+      ports:
+      - 5000
+      - 9092
+  egress:
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: app == 'udcn-transport'
+      ports:
+      - 9091
+---
+# Configure Calico Felix for optimized NDN traffic
+apiVersion: projectcalico.org/v3
+kind: FelixConfiguration
+metadata:
+  name: udcn-felix-config
+spec:
+  iptablesBackend: Auto
+  logSeverityScreen: Info
+  reportingInterval: 10s
+  flowLogsFileEnabled: true
+  flowLogsFileIncludeLabels: true
+  flowLogsFileIncludePolices: true
+  flowLogsFlushInterval: 10s
+  ipipEnabled: true

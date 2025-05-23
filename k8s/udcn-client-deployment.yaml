@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udcn-benchmark-client
+  namespace: udcn-system
+  labels:
+    app.kubernetes.io/name: udcn-benchmark-client
+    app.kubernetes.io/part-of: udcn
+spec:
+  replicas: 3  # Create 3 clients for benchmarking
+  selector:
+    matchLabels:
+      app: udcn-benchmark-client
+  template:
+    metadata:
+      labels:
+        app: udcn-benchmark-client
+        app.kubernetes.io/part-of: udcn
+    spec:
+      containers:
+      - name: benchmark-client
+        image: busybox:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/udcn
+        - name: results-volume
+          mountPath: /results
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+        env:
+        - name: TRANSPORT_SERVICE
+          value: "udcn-transport-service.udcn-system.svc.cluster.local"
+        - name: TRANSPORT_PORT
+          value: "6363"
+        - name: BENCHMARK_TYPE
+          value: "throughput"  # Options: throughput, latency, cache
+        - name: BENCHMARK_DURATION
+          value: "300"  # seconds
+        - name: REQUEST_RATE
+          value: "100"  # requests per second
+        - name: CONTENT_SIZE
+          value: "1024"  # bytes
+        - name: LOG_LEVEL
+          value: "info"
+      volumes:
+      - name: config-volume
+        configMap:
+          name: udcn-benchmark-config
+      - name: results-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: udcn-benchmark-config
+  namespace: udcn-system
+data:
+  benchmark.yaml: |
+    # Benchmark Configuration
+    client:
+      request_pattern: "poisson"  # Options: constant, poisson, burst
+      concurrent_requests: 10
+      timeout_ms: 5000
+      
+    workload:
+      content_distribution: "zipf"  # Options: uniform, zipf, custom
+      zipf_alpha: 0.9  # Higher means more skewed popularity
+      content_catalog_size: 10000
+      
+    metrics:
+      enabled: true
+      report_interval_sec: 5
+      detailed_histograms: true
+      
+    export:
+      format: "csv"  # Options: csv, json
+      filename: "/results/benchmark_results.csv"

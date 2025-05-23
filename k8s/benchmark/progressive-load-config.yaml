@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: udcn-benchmark-progressive
+  namespace: udcn-system
+data:
+  benchmark.yaml: |
+    # Progressive Load Benchmark Configuration
+    scenario:
+      name: "progressive-load"
+      description: "Progressive load testing with increasing client counts"
+      duration_sec: 300
+      
+    client:
+      count: ${CLIENTS:-10}  # Default to 10, parameterized for test script
+      request_pattern: "poisson"
+      concurrent_requests: 10
+      timeout_ms: 5000
+      
+    workload:
+      content_sizes:
+        - size_bytes: 1024
+          weight: 0.6
+        - size_bytes: 102400
+          weight: 0.3
+        - size_bytes: 10485760
+          weight: 0.1
+      content_distribution: "zipf"
+      zipf_alpha: 0.9
+      content_catalog_size: 10000
+      
+    metrics:
+      enabled: true
+      report_interval_sec: 5
+      detailed_histograms: true
+      per_client_stats: true
+      
+    export:
+      format: "csv"
+      filename: "/results/load-test-${CLIENTS:-10}.csv"

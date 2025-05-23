@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+---
+apiVersion: jaegertracing.io/v1
+kind: Jaeger
+metadata:
+  name: udcn-jaeger
+  namespace: observability
+spec:
+  strategy: production
+  storage:
+    type: elasticsearch
+    options:
+      es:
+        server-urls: http://elasticsearch:9200
+  ingress:
+    enabled: true
+  query:
+    serviceType: NodePort
+  agent:
+    strategy: DaemonSet
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: udcn-tracing-config
+  namespace: udcn-system
+data:
+  tracing.yaml: |
+    service_name: udcn-components
+    disabled: false
+    reporter:
+      logSpans: true
+      localAgentHostPort: udcn-jaeger-agent.observability:6831
+    sampler:
+      type: const
+      param: 1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: udcn-controller-tracing
+  namespace: udcn-system
+data:
+  tracing.py: |
+    #!/usr/bin/env python3
+    import os
+    import time
+    from jaeger_client import Config
+    from opentracing.propagation import Format
+    from flask import request, current_app
+    
+    def init_tracer(service_name):
+        config = Config(
+            config={
+                'sampler': {
+                    'type': 'const',
+                    'param': 1,
+                },
+                'logging': True,
+                'reporter_batch_size': 1,
+            },
+            service_name=service_name,
+        )
+        return config.initialize_tracer()
+    
+    def trace_request(tracer, request, parent_span=None):
+        span_ctx = None
+        span = None
+        
+        headers = {}
+        for k, v in request.headers:
+            headers[k.lower()] = v
+            
+        if parent_span:
+            span = tracer.start_span(
+                operation_name=request.path,
+                child_of=parent_span
+            )
+        else:
+            span = tracer.start_span(
+                operation_name=request.path
+            )
+            
+        span.set_tag('http.url', request.url)
+        span.set_tag('http.method', request.method)
+        
+        return span
+        
+    def finish_span(span, response=None):
+        if response:
+            span.set_tag('http.status_code', response.status_code)
+        span.finish()

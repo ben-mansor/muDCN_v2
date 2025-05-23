@@ -1,0 +1,93 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: udcn-service-monitor
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/part-of: udcn
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: udcn
+  namespaceSelector:
+    matchNames:
+      - udcn-system
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'udcn_.*'
+      action: keep
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: udcn-recording-rules
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/part-of: udcn
+    prometheus: k8s
+    role: alert-rules
+spec:
+  groups:
+  - name: udcn.rules
+    rules:
+    - record: udcn:cache_hit_ratio
+      expr: sum(rate(udcn_cache_hits_total[5m])) / sum(rate(udcn_cache_requests_total[5m]))
+    - record: udcn:avg_latency
+      expr: avg(udcn_request_duration_seconds)
+    - record: udcn:throughput_mbps
+      expr: sum(rate(udcn_bytes_transferred_total[1m])) * 8 / 1000000
+    - record: udcn:packet_rate
+      expr: sum(rate(udcn_packets_processed_total[1m]))
+    - record: udcn:predicted_mtu
+      expr: avg(udcn_predicted_mtu_bytes)
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: udcn-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/part-of: udcn
+    prometheus: k8s
+    role: alert-rules
+spec:
+  groups:
+  - name: udcn.alerts
+    rules:
+    - alert: UdcnCacheHitRatioLow
+      expr: udcn:cache_hit_ratio < 0.4
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "μDCN Cache hit ratio is low"
+        description: "Cache hit ratio has been below 40% for 5 minutes"
+    - alert: UdcnHighLatency
+      expr: udcn:avg_latency > 100
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "μDCN Latency is high"
+        description: "Average latency has been above 100ms for 5 minutes"
+    - alert: UdcnTransportDown
+      expr: up{job="udcn-transport"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "μDCN Transport component is down"
+        description: "The transport component has been down for more than 1 minute"
+    - alert: UdcnControllerDown
+      expr: up{job="udcn-controller"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "μDCN Controller component is down"
+        description: "The controller component has been down for more than 1 minute"

@@ -1,0 +1,40 @@
+FROM rust:latest as builder
+
+# Install dependencies required for eBPF/XDP
+RUN apt-get update && apt-get install -y \
+    libelf-dev \
+    clang \
+    llvm \
+    gcc-multilib \
+    build-essential \
+    pkg-config \
+    linux-headers-amd64 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/udcn
+
+# Copy the Rust transport source code
+COPY ./rust_ndn_transport .
+
+# Build the transport layer with release optimizations
+RUN cargo build --release
+
+# Create a smaller runtime image
+FROM debian:buster-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libelf1 \
+    iproute2 \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the built binary
+COPY --from=builder /usr/src/udcn/target/release/udcn-transport /usr/local/bin/
+
+# Create directory for configuration
+RUN mkdir -p /etc/udcn
+
+# Default command
+ENTRYPOINT ["/usr/local/bin/udcn-transport"]
+CMD ["--config", "/etc/udcn/transport.yaml"]

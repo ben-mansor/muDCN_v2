@@ -1,0 +1,74 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: udcn-controller-failure
+  namespace: udcn-system
+spec:
+  action: pod-failure
+  mode: one
+  selector:
+    namespaces:
+      - udcn-system
+    labelSelectors:
+      app: "udcn-controller"
+  duration: "30s"
+  scheduler:
+    cron: "@every 10m"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: udcn-transport-failure
+  namespace: udcn-system
+spec:
+  action: pod-failure
+  mode: one
+  selector:
+    namespaces:
+      - udcn-system
+    labelSelectors:
+      app: "udcn-transport"
+  duration: "30s"
+  scheduler:
+    cron: "@every 15m"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: udcn-network-delay
+  namespace: udcn-system
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - udcn-system
+    labelSelectors:
+      app.kubernetes.io/part-of: "udcn"
+  delay:
+    latency: "100ms"
+    correlation: "25"
+    jitter: "50ms"
+  duration: "5m"
+  scheduler:
+    cron: "@every 30m"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: udcn-packet-loss
+  namespace: udcn-system
+spec:
+  action: loss
+  mode: all
+  selector:
+    namespaces:
+      - udcn-system
+    labelSelectors:
+      app.kubernetes.io/part-of: "udcn"
+  loss:
+    loss: "10"
+    correlation: "75"
+  duration: "3m"
+  scheduler:
+    cron: "@every 40m"

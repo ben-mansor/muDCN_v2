@@ -1,0 +1,37 @@
+FROM python:3.9-slim
+
+# Install dependencies required for ML controller
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Create directories for models and configuration
+RUN mkdir -p /etc/udcn /models
+
+# Copy requirements first for better caching
+COPY ./python_control_plane/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install TensorFlow Lite
+RUN pip install --no-cache-dir tflite-runtime
+
+# Copy the Python controller source code
+COPY ./python_control_plane .
+
+# Create a non-root user
+RUN useradd -m udcnuser
+RUN chown -R udcnuser:udcnuser /app /etc/udcn /models
+USER udcnuser
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Expose ports for API and metrics
+EXPOSE 5000 9092
+
+# Default command
+ENTRYPOINT ["python"]
+CMD ["main.py", "--config", "/etc/udcn/controller.yaml"]
