@@ -1,0 +1,77 @@
+[package]
+name = "rust-ndn-transport"
+version = "0.1.0"
+edition = "2021"
+authors = ["μDCN Team"]
+description = "High-performance Rust NDN transport layer with QUIC integration for μDCN"
+license = "MIT"
+
+# Enable cdylib for Python bindings
+[lib]
+name = "rust_ndn_transport"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# QUIC implementation - Quinn is a pure-Rust QUIC implementation
+quinn = "0.9.3"  # Downgraded
+tokio = { version = "1.28.0", features = ["full"] }  # Downgraded
+bytes = "1.4.0"
+structopt = "0.3.26"
+clap = { version = "4.3.3", features = ["derive"] }  # Command line argument parsing
+dashmap = "5.4.0"  # Thread-safe concurrent HashMap
+lru = "0.10.0"     # Downgraded
+sha2 = "0.10.7"    # Hashing for NDN names
+ring = "0.16.20"   # Cryptographic operations
+prometheus = "0.13.3"  # Prometheus metrics
+# Web server temporarily removed
+tonic = "0.9.1"    # Downgraded
+prost = "0.11.8"   # Downgraded
+tokio-stream = { version = "0.1.14", features = ["sync", "net"] }  # Streaming support
+tracing = "0.1.37"
+tracing-subscriber = "0.3.17"
+futures = "0.3.28"
+serde = { version = "1.0.163", features = ["derive"] }  # Downgraded
+serde_json = "1.0.96"  # Downgraded
+anyhow = "1.0.72"
+thiserror = "1.0.40"  # Downgraded
+rand = "0.8.5"
+log = "0.4.19"
+env_logger = "0.10.0"
+socket2 = "0.4.9"
+libc = "0.2.147"
+# DNS resolution temporarily removed
+parking_lot = "0.12.1"  # Efficient synchronization primitives
+hex = "0.4.3"      # Hex encoding/decoding
+# Added missing dependencies
+rustls = "0.20.8"  # Downgraded
+lazy_static = "1.4.0"  # For static initialization of metrics
+rcgen = "0.10.0"   # Self-signed certificate generation
+# Force home crate to a compatible version
+home = "=0.5.5"
+
+# Python bindings with PyO3
+pyo3 = { version = "0.18.3", features = ["extension-module", "abi3-py38"] }
+numpy = { version = "0.18.0" }
+
+# Add features flag to enable tokio test
+[features]
+tokio-test = []
+
+[dev-dependencies]
+criterion = "0.4.0"  # Downgraded
+
+[build-dependencies]
+prost-build = "0.11.8"  # Downgraded
+tonic-build = "0.9.1"   # Downgraded
+
+[[bin]]
+name = "udcn-node"
+path = "src/bin/node.rs"
+
+# Optimize for speed in release mode
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
