@@ -17,7 +17,7 @@
 
 The main implementation uses Docker containers to deploy the complete μDCN stack. This version is thoroughly tested and used for benchmarking and performance evaluation in the thesis.
 
-### Kubernetes-based Deployment (Future Work)
+### Kubernetes-based Deployment (Extra Work)
 
 An exploratory Kubernetes deployment has been designed and prepared as future work. This implementation demonstrates how μDCN could scale in production environments using Kubernetes features like DaemonSets for the transport layer and Deployments for the control plane.
 
@@ -32,8 +32,8 @@ An exploratory Kubernetes deployment has been designed and prepared as future wo
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/udcn.git
-cd udcn
+git clone https://github.com/ben-mansor/muDCN_v2.git
+cd muDCN_v2
 
 # Build and run the containers
 docker-compose up --build
@@ -115,14 +115,6 @@ For detailed information on the Kubernetes deployment, refer to `docs/thesis/k8s
 - **Resource Usage**: CPU, memory, and network utilization
 
 Pre-generated visualization scripts are available in the `visualization_plots/` directory for common analysis tasks.
-
-## Thesis & Paper Reference
-
-The complete academic thesis for this project is available in the `/docs/thesis/` directory. The LaTeX source files are provided for reference and reproducibility.
-
-The Kubernetes deployment is detailed in the `chapter7_future_work_k8s.tex` section of the thesis, which outlines the design considerations and potential benefits of a Kubernetes-based production deployment.
-
-A condensed paper based on this work has been prepared using the IEEE OJCOMS template in the `IEEE_OJCOMS-template-LaTex_202401/` directory.
 
 ## License
 
