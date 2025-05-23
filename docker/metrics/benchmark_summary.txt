@@ -1,0 +1,156 @@
+================================================================================
+μDCN BENCHMARK RESULTS SUMMARY
+================================================================================
+Generated: 2025-05-19 13:12:47
+Total Clients: 13
+
+--------------------------------------------------------------------------------
+SERVER PERFORMANCE METRICS
+--------------------------------------------------------------------------------
+Total Cache Hits: 6751
+Total Cache Misses: 3251
+Overall Cache Hit Rate: 67.50%
+Average CPU Usage: 57.04%
+Peak CPU Usage: 94.90%
+Average Memory Usage: 2708.82 MB
+Total MTU Predictions: 41
+Total Packet Drops: 351
+Duration: 11.93 seconds
+
+--------------------------------------------------------------------------------
+BENCHMARK TYPE: FLOOD
+--------------------------------------------------------------------------------
+Total Interest Packets: 7451
+Successful Responses: 0
+Success Rate: 0.00%
+
+--------------------------------------------------------------------------------
+BENCHMARK TYPE: MTU
+--------------------------------------------------------------------------------
+Total Interest Packets: 8539
+Successful Responses: 0
+Success Rate: 0.00%
+
+--------------------------------------------------------------------------------
+BENCHMARK TYPE: REPEAT
+--------------------------------------------------------------------------------
+Total Interest Packets: 12614
+Successful Responses: 0
+Success Rate: 0.00%
+
+--------------------------------------------------------------------------------
+CLIENT: 21ee8dd57a75
+--------------------------------------------------------------------------------
+Benchmark Types: repeat
+Total Interest Packets: 1949
+Success Rate: 0.00%
+Test Duration: 59.18 seconds
+Effective Interest Rate: 32.93 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: 58d166a78865
+--------------------------------------------------------------------------------
+Benchmark Types: mtu
+Total Interest Packets: 1716
+Success Rate: 0.00%
+Test Duration: 59.60 seconds
+Effective Interest Rate: 28.79 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: eb5b733f0030
+--------------------------------------------------------------------------------
+Benchmark Types: repeat
+Total Interest Packets: 2653
+Success Rate: 0.00%
+Test Duration: 89.90 seconds
+Effective Interest Rate: 29.51 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: 71aeeddf6699
+--------------------------------------------------------------------------------
+Benchmark Types: flood
+Total Interest Packets: 2063
+Success Rate: 0.00%
+Test Duration: 59.52 seconds
+Effective Interest Rate: 34.66 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: 1d5a1941a6eb
+--------------------------------------------------------------------------------
+Benchmark Types: repeat
+Total Interest Packets: 3847
+Success Rate: 0.00%
+Test Duration: 119.75 seconds
+Effective Interest Rate: 32.12 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: 004754f03caa
+--------------------------------------------------------------------------------
+Benchmark Types: repeat
+Total Interest Packets: 2239
+Success Rate: 0.00%
+Test Duration: 59.51 seconds
+Effective Interest Rate: 37.63 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: 457286f6e478
+--------------------------------------------------------------------------------
+Benchmark Types: mtu
+Total Interest Packets: 1720
+Success Rate: 0.00%
+Test Duration: 59.39 seconds
+Effective Interest Rate: 28.96 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: de86240b6833
+--------------------------------------------------------------------------------
+Benchmark Types: mtu
+Total Interest Packets: 3434
+Success Rate: 0.00%
+Test Duration: 119.94 seconds
+Effective Interest Rate: 28.63 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: 207d319fb856
+--------------------------------------------------------------------------------
+Benchmark Types: flood
+Total Interest Packets: 1825
+Success Rate: 0.00%
+Test Duration: 59.03 seconds
+Effective Interest Rate: 30.91 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: 03485066742d
+--------------------------------------------------------------------------------
+Benchmark Types: mtu
+Total Interest Packets: 1669
+Success Rate: 0.00%
+Test Duration: 59.06 seconds
+Effective Interest Rate: 28.26 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: bdf09c2fc6d5
+--------------------------------------------------------------------------------
+Benchmark Types: flood
+Total Interest Packets: 1681
+Success Rate: 0.00%
+Test Duration: 59.73 seconds
+Effective Interest Rate: 28.14 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: fd038ba4aa01
+--------------------------------------------------------------------------------
+Benchmark Types: repeat
+Total Interest Packets: 1926
+Success Rate: 0.00%
+Test Duration: 59.48 seconds
+Effective Interest Rate: 32.38 interests/sec
+
+--------------------------------------------------------------------------------
+CLIENT: 4af83eb30054
+--------------------------------------------------------------------------------
+Benchmark Types: flood
+Total Interest Packets: 1882
+Success Rate: 0.00%
+Test Duration: 59.43 seconds
+Effective Interest Rate: 31.67 interests/sec
