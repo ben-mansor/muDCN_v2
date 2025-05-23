@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package ndn;
+
+// NDN Router service for Interest/Data exchange
+service NdnRouter {
+  // Send an Interest packet and receive Data
+  rpc SendInterest (InterestRequest) returns (DataResponse);
+}
+
+// Interest request message
+message InterestRequest {
+  // Name of the Interest
+  string name = 1;
+  
+  // Remote server in format "host:port"
+  string remote_server = 2;
+  
+  // Interest parameters
+  bool can_be_prefix = 3;
+  bool must_be_fresh = 4;
+  uint32 lifetime_ms = 5;
+}
+
+// Data response message
+message DataResponse {
+  // Name of the Data
+  string name = 1;
+  
+  // Content of the Data
+  bytes content = 2;
+  
+  // Success indicator
+  bool success = 3;
+  
+  // Error message (if any)
+  string error_message = 4;
+}

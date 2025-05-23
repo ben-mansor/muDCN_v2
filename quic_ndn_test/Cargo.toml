@@ -1,0 +1,25 @@
+[package]
+name = "quic_ndn_test"
+version = "0.1.0"
+edition = "2021"
+authors = ["μDCN Team"]
+description = "Simple test implementation of NDN over QUIC"
+
+[dependencies]
+quinn = "0.9.3"
+tokio = { version = "1.28.0", features = ["full"] }
+bytes = "1.4.0"
+rand = "0.8.5"
+rustls = { version = "0.20.8", features = ["dangerous_configuration"] }
+rcgen = "0.10.0"
+tracing = "0.1.37"
+tracing-subscriber = "0.3.17"
+tonic = "0.9.1"
+prost = "0.11.8"
+
+[build-dependencies]
+tonic-build = "0.9.1"
+
+[[bin]]
+name = "grpc_test"
+path = "src/grpc_test.rs"
