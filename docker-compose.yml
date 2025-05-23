@@ -1,0 +1,160 @@
+version: '3.8'
+
+networks:
+  udcn_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: docker/server/Dockerfile
+    container_name: udcn_server
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_PTRACE
+    volumes:
+      - ./docker/metrics:/app/metrics
+    networks:
+      udcn_network:
+        ipv4_address: 172.20.0.2
+    ports:
+      - "9090:9090"  # gRPC
+      - "9000:9000"  # QUIC
+    environment:
+      - LOG_LEVEL=info
+      - METRICS_INTERVAL=1000  # ms
+      - CACHE_SIZE=10000
+      - MTU_PREDICTION_ENABLED=true
+    command: /usr/local/bin/server_start.sh
+
+  client1:
+    build:
+      context: .
+      dockerfile: docker/client/Dockerfile
+    container_name: udcn_client1
+    depends_on:
+      - server
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./docker/metrics:/app/metrics
+    networks:
+      udcn_network:
+        ipv4_address: 172.20.0.3
+    environment:
+      - SERVER_ADDR=172.20.0.2
+      - SERVER_PORT=9000
+      - LATENCY=10ms  # Default latency
+      - PACKET_LOSS=0%  # Default packet loss
+      - BENCHMARK_TYPE=repeated_interests
+      - INTEREST_RATE=800  # Interests per second
+      - RUN_DURATION=120  # Extended duration for more meaningful cache hit rate trend
+      - INTEREST_PATTERN=sequential  # Sequential pattern for better cache warming
+      - BANDWIDTH=100mbit
+      - LOG_LEVEL=info
+    command: /usr/local/bin/client_start.sh
+
+  client2:
+    build:
+      context: .
+      dockerfile: docker/client/Dockerfile
+    container_name: udcn_client2
+    depends_on:
+      - server
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./docker/metrics:/app/metrics
+    networks:
+      udcn_network:
+        ipv4_address: 172.20.0.4
+    environment:
+      - SERVER_ADDR=172.20.0.2
+      - SERVER_PORT=9000
+      - LATENCY=50ms  # Variable latency for RTT variance
+      - PACKET_LOSS=2%  # Some packet loss to introduce variance
+      - BENCHMARK_TYPE=mtu_prediction_test
+      - INTEREST_RATE=400  # Moderate rate for MTU predictions
+      - RUN_DURATION=120  # Extended duration for meaningful MTU prediction trend
+      - BANDWIDTH=75mbit  # Reduced bandwidth to observe MTU adaptation
+      - MTU_TEST_SIZES=500,1000,1500,2000,3000,4000  # Multiple sizes to test
+      - LOG_LEVEL=info
+    command: /usr/local/bin/client_start.sh
+
+  client3:
+    build:
+      context: .
+      dockerfile: docker/client/Dockerfile
+    container_name: udcn_client3
+    depends_on:
+      - server
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./docker/metrics:/app/metrics
+    networks:
+      udcn_network:
+        ipv4_address: 172.20.0.5
+    environment:
+      - SERVER_ADDR=172.20.0.2
+      - SERVER_PORT=9000
+      - LATENCY=30ms  # Moderate latency
+      - PACKET_LOSS=10%  # High packet loss as requested
+      - BENCHMARK_TYPE=repeated_interests
+      - INTEREST_RATE=500  # Moderate interest rate
+      - RUN_DURATION=90  # Extended duration
+      - BANDWIDTH=100mbit
+      - LOG_LEVEL=info
+    command: /usr/local/bin/client_start.sh
+    
+  client4:
+    build:
+      context: .
+      dockerfile: docker/client/Dockerfile
+    container_name: udcn_client4
+    depends_on:
+      - server
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./docker/metrics:/app/metrics
+    networks:
+      udcn_network:
+        ipv4_address: 172.20.0.6
+    environment:
+      - SERVER_ADDR=172.20.0.2
+      - SERVER_PORT=9000
+      - LATENCY=5ms  # Minimal latency for saturation test
+      - PACKET_LOSS=0%  # No packet loss for saturation test
+      - BENCHMARK_TYPE=constant_interest_flood
+      - INTEREST_RATE=5000  # Very high interest rate to saturate system
+      - RUN_DURATION=60  # One minute of intense load
+      - BANDWIDTH=1000mbit  # High bandwidth to avoid network bottleneck
+      - LOG_LEVEL=debug  # Detailed logging for saturation analysis
+    command: /usr/local/bin/client_start.sh
+
+  metrics_collector:
+    image: python:3.9
+    container_name: udcn_metrics
+    depends_on:
+      - server
+      - client1
+      - client2
+      - client3
+      - client4
+    volumes:
+      - ./docker/metrics:/app/metrics
+      - ./docker/benchmark:/app/benchmark
+    working_dir: /app
+    command: >
+      bash -c "
+        cd /app/benchmark &&
+        python -m http.server 8080
+      "
+    ports:
+      - "8080:8080"
