@@ -17,7 +17,7 @@
 
 The main implementation uses Docker containers to deploy the complete μDCN stack. This version is thoroughly tested and used for benchmarking and performance evaluation in the thesis.
 
-### Kubernetes-based Deployment (Extra Work)
+### Kubernetes-based Deployment (Still in testing)
 
 An exploratory Kubernetes deployment has been designed and prepared as future work. This implementation demonstrates how μDCN could scale in production environments using Kubernetes features like DaemonSets for the transport layer and Deployments for the control plane.
 
