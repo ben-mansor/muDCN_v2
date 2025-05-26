@@ -112,12 +112,12 @@ RUN apt-get update --allow-unauthenticated && apt-get install -y --allow-unauthe
 COPY --from=builder /app/bin/ /usr/local/bin/
 
 # Create placeholder scripts for all possible server binaries that might not have been built
-RUN for binary in grpc_server node ndn_xdp; do \
-    if [ ! -f "/usr/local/bin/$binary" ]; then \
-        echo '#!/bin/bash\necho "This is a placeholder for '$binary' which was not built successfully"\nexit 0' > /usr/local/bin/$binary; \
-        chmod +x /usr/local/bin/$binary; \
-    fi; \
-done
+#RUN for binary in grpc_server node ndn_xdp; do \
+#    if [ ! -f "/usr/local/bin/$binary" ]; then \
+ #       echo '#!/bin/bash\necho "This is a placeholder for '$binary' which was not built successfully"\nexit 0' > /usr/local/bin/$binary; \
+#        chmod +x /usr/local/bin/$binary; \
+#    fi; \
+#done
 
 # Copy scripts
 COPY docker/server/scripts/ /usr/local/bin/
