@@ -29,14 +29,10 @@ COPY rust_ndn_transport /app/rust_ndn_transport
 
 # Build Rust client tools with error handling
 WORKDIR /app/rust_ndn_transport
-RUN cargo build --release --bin quic_test && \
-    cargo build --release --bin udcn-node && \
-    cargo build --release --bin quic_demo && \
-    echo "Failed to build client binaries but continuing with placeholder" \
-    && mkdir -p /app/bin \
-    && cp -f target/release/quic_test /app/bin 2>/dev/null || true \
-    && cp -f target/release/udcn-node /app/bin 2>/dev/null || true \
-    && cp -f target/release/quic_demo /app/bin 2>/dev/null || true
+RUN mkdir -p /app/bin && \
+    cargo build --release --bin quic_test || echo "❌ quic_test failed" ; cp -f target/release/quic_test /app/bin || true && \
+    cargo build --release --bin udcn-node || echo "❌ udcn-node failed" ; cp -f target/release/udcn-node /app/bin || true && \
+    cargo build --release --bin quic_demo || echo "❌ quic_demo failed" ; cp -f target/release/quic_demo /app/bin || true
 
 FROM ubuntu:22.04
 
