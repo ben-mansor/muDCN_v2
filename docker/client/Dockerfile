@@ -16,6 +16,7 @@ RUN apt-get update --allow-unauthenticated && apt-get install -y --allow-unauthe
     clang \
     git \
     pkg-config \
+    protobuf-compiler \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
