@@ -28,9 +28,9 @@ COPY rust_ndn_transport /app/rust_ndn_transport
 
 # Build Rust client tools with error handling
 WORKDIR /app/rust_ndn_transport
-RUN cargo build --release --bin quic_test || \
-    cargo build --release --bin udcn-node || \
-    cargo build --release --bin quic_demo || \
+RUN cargo build --release --bin quic_test && \
+    cargo build --release --bin udcn-node && \
+    cargo build --release --bin quic_demo && \
     echo "Failed to build client binaries but continuing with placeholder" \
     && mkdir -p /app/bin \
     && cp -f target/release/quic_test /app/bin 2>/dev/null || true \
@@ -68,10 +68,10 @@ RUN apt-get update --allow-unauthenticated && apt-get install -y --allow-unauthe
 RUN pip3 install matplotlib requests --no-cache-dir
 
 # Create placeholder scripts for all possible client binaries
-RUN for binary in quic_test udcn-node quic_demo client; do \
-    echo '#!/bin/bash\necho "This is a placeholder for '$binary' which was not built successfully"\nexit 0' > /usr/local/bin/$binary; \
-    chmod +x /usr/local/bin/$binary; \
-done
+#RUN for binary in quic_test udcn-node quic_demo client; do \
+#    echo '#!/bin/bash\necho "This is a placeholder for '$binary' which was not built successfully"\nexit 0' > /usr/local/bin/$binary; \
+ #   chmod +x /usr/local/bin/$binary; \
+#done
 
 # Copy built binaries from builder stage (if any)
 COPY --from=builder /app/bin/ /usr/local/bin/
